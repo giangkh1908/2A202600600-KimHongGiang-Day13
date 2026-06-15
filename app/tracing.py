@@ -3,22 +3,31 @@ from __future__ import annotations
 import os
 from typing import Any
 
+_LANGFUSE_HOST = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
+
 try:
-    from langfuse.decorators import observe, langfuse_context
+    from langfuse import Langfuse, observe
+
+    _client = Langfuse(host=_LANGFUSE_HOST)
+
+    def get_client() -> Langfuse:
+        return _client
+
+    def flush() -> None:
+        _client.flush()
+
 except Exception:  # pragma: no cover
+
     def observe(*args: Any, **kwargs: Any):
         def decorator(func):
             return func
         return decorator
 
-    class _DummyContext:
-        def update_current_trace(self, **kwargs: Any) -> None:
-            return None
+    def get_client() -> None:  # type: ignore[return]
+        return None
 
-        def update_current_observation(self, **kwargs: Any) -> None:
-            return None
-
-    langfuse_context = _DummyContext()
+    def flush() -> None:
+        pass
 
 
 def tracing_enabled() -> bool:

@@ -1,12 +1,19 @@
 from __future__ import annotations
 
+import json
 import os
+from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
+
+load_dotenv()
 from fastapi.responses import JSONResponse
 from structlog.contextvars import bind_contextvars
 
 from .agent import LabAgent
+from datetime import datetime, timezone
+
 from .incidents import disable, enable, status
 from .logging_config import configure_logging, get_logger
 from .metrics import record_error, snapshot
@@ -14,6 +21,22 @@ from .middleware import CorrelationIdMiddleware
 from .pii import hash_user_id, summarize_text
 from .schemas import ChatRequest, ChatResponse
 from .tracing import tracing_enabled
+
+AUDIT_LOG_PATH = Path(os.getenv("AUDIT_LOG_PATH", "data/audit.jsonl"))
+
+
+def write_audit_log(user_id: str, action: str, resource: str, status: str, detail: str = "") -> None:
+    record = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "user_id_hash": hash_user_id(user_id),
+        "action": action,
+        "resource": resource,
+        "status": status,
+        "detail": detail,
+    }
+    AUDIT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with AUDIT_LOG_PATH.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 configure_logging()
 log = get_logger()
@@ -42,10 +65,29 @@ async def metrics() -> dict:
     return snapshot()
 
 
+@app.get("/cost-report")
+async def cost_report() -> dict:
+    from .metrics import REQUEST_COSTS
+    total = sum(REQUEST_COSTS)
+    count = len(REQUEST_COSTS)
+    return {
+        "total_cost_usd": round(total, 4),
+        "request_count": count,
+        "avg_cost_per_request": round(total / count, 6) if count else 0,
+        "baseline_daily_estimate": round(total * (100 / max(count, 1)), 4),
+        "note": "With cost_spike incident enabled, output_tokens x4 → cost increases ~4x"
+    }
+
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: Request, body: ChatRequest) -> ChatResponse:
-    # TODO: Enrich logs with request context (user_id_hash, session_id, feature, model, env)
-    # bind_contextvars(...)
+    bind_contextvars(
+        user_id_hash=hash_user_id(body.user_id),
+        session_id=body.session_id,
+        feature=body.feature,
+        model=agent.model,
+        env=os.getenv("APP_ENV", "dev"),
+    )
     
     log.info(
         "request_received",
@@ -68,6 +110,7 @@ async def chat(request: Request, body: ChatRequest) -> ChatResponse:
             cost_usd=result.cost_usd,
             payload={"answer_preview": summarize_text(result.answer)},
         )
+        write_audit_log(body.user_id, "chat", "agent", "success")
         return ChatResponse(
             answer=result.answer,
             correlation_id=request.state.correlation_id,
@@ -80,6 +123,7 @@ async def chat(request: Request, body: ChatRequest) -> ChatResponse:
     except Exception as exc:  # pragma: no cover
         error_type = type(exc).__name__
         record_error(error_type)
+        write_audit_log(body.user_id, "chat", "agent", "error", detail=error_type)
         log.error(
             "request_failed",
             service="api",
@@ -93,6 +137,7 @@ async def chat(request: Request, body: ChatRequest) -> ChatResponse:
 async def enable_incident(name: str) -> JSONResponse:
     try:
         enable(name)
+        write_audit_log("system", "incident_enable", "incidents", "success", detail=name)
         log.warning("incident_enabled", service="control", payload={"name": name})
         return JSONResponse({"ok": True, "incidents": status()})
     except KeyError as exc:
@@ -103,6 +148,7 @@ async def enable_incident(name: str) -> JSONResponse:
 async def disable_incident(name: str) -> JSONResponse:
     try:
         disable(name)
+        write_audit_log("system", "incident_disable", "incidents", "success", detail=name)
         log.warning("incident_disabled", service="control", payload={"name": name})
         return JSONResponse({"ok": True, "incidents": status()})
     except KeyError as exc:

@@ -3,14 +3,17 @@ window: 28d
 slis:
   latency_p95_ms:
     objective: 3000
-    target: 99.5
-    note: Replace with your group's target
+    target: 99.0
+    note: P95 latency must be below 3000ms for 99% of requests
   error_rate_pct:
     objective: 2
-    target: 99.0
+    target: 99.5
+    note: Error rate must stay below 2% for 99.5% of the time
   daily_cost_usd:
     objective: 2.5
     target: 100.0
+    note: Daily cost must not exceed $2.50
   quality_score_avg:
     objective: 0.75
     target: 95.0
+    note: Average quality score must be at least 0.75

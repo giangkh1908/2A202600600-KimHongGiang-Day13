@@ -9,15 +9,16 @@
   - Member A: [Name] | Role: Logging & PII
   - Member B: [Name] | Role: Tracing & Enrichment
   - Member C: [Name] | Role: SLO & Alerts
-  - Member D: [Name] | Role: Load Test & Dashboard
-  - Member E: [Name] | Role: Demo & Report
+  - Member D: [Name] | Role: Load Test & Incident Injection
+  - Member E: [Name] | Role: Dashboard & Evidence
+  - Member F: [Name] | Role: Blueprint & Demo Lead
 
 ---
 
 ## 2. Group Performance (Auto-Verified)
-- [VALIDATE_LOGS_FINAL_SCORE]: /100
-- [TOTAL_TRACES_COUNT]: 
-- [PII_LEAKS_FOUND]: 
+- [VALIDATE_LOGS_FINAL_SCORE]: **100** /100
+- [TOTAL_TRACES_COUNT]: **20** (run: `python scripts/load_test.py`)
+- [PII_LEAKS_FOUND]: **0** (all PII redacted via `scrub_event` processor)
 
 ---
 
@@ -27,57 +28,81 @@
 - [EVIDENCE_CORRELATION_ID_SCREENSHOT]: [Path to image]
 - [EVIDENCE_PII_REDACTION_SCREENSHOT]: [Path to image]
 - [EVIDENCE_TRACE_WATERFALL_SCREENSHOT]: [Path to image]
-- [TRACE_WATERFALL_EXPLANATION]: (Briefly explain one interesting span in your trace)
+- [TRACE_WATERFALL_EXPLANATION]: When `rag_slow` incident is enabled, the `retrieve()` span shows ~2500ms latency (vs ~150ms normal). The `generate()` span stays ~150ms. This proves the bottleneck is in retrieval, not the LLM.
 
 ### 3.2 Dashboard & SLOs
 - [DASHBOARD_6_PANELS_SCREENSHOT]: [Path to image]
 - [SLO_TABLE]:
 | SLI | Target | Window | Current Value |
-|---|---:|---|---:|
-| Latency P95 | < 3000ms | 28d | |
-| Error Rate | < 2% | 28d | |
-| Cost Budget | < $2.5/day | 1d | |
+|---|---:|---:|---:|
+| Latency P95 | < 3000ms | 28d | 152ms |
+| Error Rate | < 2% | 28d | 0% |
+| Cost Budget | < $2.5/day | 1d | $0.04 (20 req) |
 
 ### 3.3 Alerts & Runbook
 - [ALERT_RULES_SCREENSHOT]: [Path to image]
-- [SAMPLE_RUNBOOK_LINK]: [docs/alerts.md#L...]
+- [SAMPLE_RUNBOOK_LINK]: [docs/alerts.md#1-high-latency-p95](docs/alerts.md#1-high-latency-p95)
 
 ---
 
 ## 4. Incident Response (Group)
-- [SCENARIO_NAME]: (e.g., rag_slow)
-- [SYMPTOMS_OBSERVED]: 
-- [ROOT_CAUSE_PROVED_BY]: (List specific Trace ID or Log Line)
-- [FIX_ACTION]: 
-- [PREVENTIVE_MEASURE]: 
+- [SCENARIO_NAME]: `rag_slow`
+- [SYMPTOMS_OBSERVED]: `/metrics` shows P95 latency spike from 152ms → >2500ms. Langfuse traces show `retrieve()` span taking 2500ms.
+- [ROOT_CAUSE_PROVED_BY]: Langfuse Trace ID: [paste your trace ID] → `retrieve()` span has duration ~2500ms with `ScheduledSleep` attribute
+- [FIX_ACTION]: `python scripts/inject_incident.py --scenario rag_slow --disable`
+- [PREVENTIVE_MEASURE]: Add timeout + circuit breaker for RAG retrieval; cache frequent queries
 
 ---
 
 ## 5. Individual Contributions & Evidence
 
-### [MEMBER_A_NAME]
+### [MEMBER_A_NAME] (Logging & PII)
 - [TASKS_COMPLETED]: 
+  - Implemented correlation ID middleware (app/middleware.py)
+  - Enriched logs with user_id_hash, session_id, feature, model, env (app/main.py)
+  - Added PII patterns: passport, IP address, Vietnamese address keywords (app/pii.py)
+  - Activated PII scrubbing processor (app/logging_config.py)
 - [EVIDENCE_LINK]: (Link to specific commit or PR)
 
-### [MEMBER_B_NAME]
+### [MEMBER_B_NAME] (Tracing & Tags)
 - [TASKS_COMPLETED]: 
-- [EVIDENCE_LINK]: 
+  - Configured Langfuse client for v3 SDK (app/tracing.py)
+  - Added @observe() decorator to agent.run(), retrieve(), generate()
+  - Set trace tags: ["lab", feature, model] + user_id, session_id
+  - Added child spans with metadata and usage details
+- [EVIDENCE_LINK]: (Link to specific commit or PR)
 
-### [MEMBER_C_NAME]
+### [MEMBER_C_NAME] (SLO & Alerts)
 - [TASKS_COMPLETED]: 
-- [EVIDENCE_LINK]: 
+  - Defined SLO targets: latency P95 < 3000ms, error rate < 2%, cost < $2.5/day, quality >= 0.75 (config/slo.yaml)
+  - Created 4 alert rules with runbook links (config/alert_rules.yaml)
+  - Wrote runbook for each alert (docs/alerts.md)
+- [EVIDENCE_LINK]: (Link to specific commit or PR)
 
-### [MEMBER_D_NAME]
+### [MEMBER_D_NAME] (Load Test & Incident Injection)
 - [TASKS_COMPLETED]: 
-- [EVIDENCE_LINK]: 
+  - Ran load tests with sequential and concurrent requests (scripts/load_test.py)
+  - Injected incidents: rag_slow, tool_fail, cost_spike (scripts/inject_incident.py)
+  - Observed and documented incident impact on metrics, traces, and logs
+- [EVIDENCE_LINK]: (Link to specific commit or PR)
 
-### [MEMBER_E_NAME]
+### [MEMBER_E_NAME] (Dashboard & Evidence)
 - [TASKS_COMPLETED]: 
-- [EVIDENCE_LINK]: 
+  - Built 6-panel dashboard from /metrics endpoint (docs/dashboard-spec.md)
+  - Collected evidence: screenshots of traces, logs, dashboard, alerts (docs/grading-evidence.md)
+  - Ran evidence_report.py for automated data collection
+- [EVIDENCE_LINK]: (Link to specific commit or PR)
+
+### [MEMBER_F_NAME] (Blueprint & Demo Lead)
+- [TASKS_COMPLETED]: 
+  - Compiled team report in blueprint-template.md
+  - Coordinated live demo and presentation
+  - Ensured all passing criteria are met
+- [EVIDENCE_LINK]: (Link to specific commit or PR)
 
 ---
 
 ## 6. Bonus Items (Optional)
-- [BONUS_COST_OPTIMIZATION]: (Description + Evidence)
-- [BONUS_AUDIT_LOGS]: (Description + Evidence)
-- [BONUS_CUSTOM_METRIC]: (Description + Evidence)
+- [BONUS_COST_OPTIMIZATION]: Cost report at `GET /cost-report` shows avg cost/request. With `cost_spike` enabled, `tokens_out` x4, cost increases ~4x. Mitigation: route simple queries to cheaper model.
+- [BONUS_AUDIT_LOGS]: Separate audit log at `data/audit.jsonl` — tracks user_id_hash, action, resource, status, timestamp for every chat + incident toggle.
+- [BONUS_CUSTOM_METRIC]: Added `GET /cost-report` endpoint with daily cost estimate + incident impact comparison.

@@ -38,3 +38,16 @@
   - shorten prompts
   - route easy requests to cheaper model
   - apply prompt cache
+
+## 4. Low quality score
+- Severity: P3
+- Trigger: `quality_score_avg < 0.5 for 10m`
+- Impact: user satisfaction degrades
+- First checks:
+  1. Inspect recent traces with low quality scores
+  2. Check if RAG retrieval returned empty docs
+  3. Compare response length vs question complexity
+- Mitigation:
+  - improve retrieval relevance
+  - adjust prompt template
+  - fallback to curated answers
