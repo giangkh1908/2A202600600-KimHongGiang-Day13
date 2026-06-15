@@ -62,7 +62,7 @@
   - Enriched logs with user_id_hash, session_id, feature, model, env (app/main.py)
   - Added PII patterns: passport, IP address, Vietnamese address keywords (app/pii.py)
   - Activated PII scrubbing processor (app/logging_config.py)
-- [EVIDENCE_LINK]: (Link to specific commit or PR)
+- [EVIDENCE_LINK]: https://github.com/giangkh1908/2A202600600-KimHongGiang-Day13/commit/4c8768e
 
 ### B. Kim Hồng Giang (Tracing & Tags)
 - [TASKS_COMPLETED]: 
@@ -70,35 +70,35 @@
   - Added @observe() decorator to agent.run(), retrieve(), generate()
   - Set trace tags: ["lab", feature, model] + user_id, session_id
   - Added child spans with metadata and usage details
-- [EVIDENCE_LINK]: (Link to specific commit or PR)
+- [EVIDENCE_LINK]: https://github.com/giangkh1908/2A202600600-KimHongGiang-Day13/commit/4c8768e
 
 ### C. Kim Hồng Giang (SLO & Alerts)
 - [TASKS_COMPLETED]: 
   - Defined SLO targets: latency P95 < 3000ms, error rate < 2%, cost < $2.5/day, quality >= 0.75 (config/slo.yaml)
   - Created 4 alert rules with runbook links (config/alert_rules.yaml)
   - Wrote runbook for each alert (docs/alerts.md)
-- [EVIDENCE_LINK]: (Link to specific commit or PR)
+- [EVIDENCE_LINK]: https://github.com/giangkh1908/2A202600600-KimHongGiang-Day13/commit/4c8768e
 
 ### D. Kim Hồng Giang (Load Test & Incident Injection)
 - [TASKS_COMPLETED]: 
   - Ran load tests with sequential and concurrent requests (scripts/load_test.py)
   - Injected incidents: rag_slow, tool_fail, cost_spike (scripts/inject_incident.py)
   - Observed and documented incident impact on metrics, traces, and logs
-- [EVIDENCE_LINK]: (Link to specific commit or PR)
+- [EVIDENCE_LINK]: https://github.com/giangkh1908/2A202600600-KimHongGiang-Day13/commit/4c8768e
 
 ### E. Kim Hồng Giang (Dashboard & Evidence)
 - [TASKS_COMPLETED]: 
   - Built 6-panel dashboard from /metrics endpoint (docs/dashboard-spec.md)
   - Collected evidence: screenshots of traces, logs, dashboard, alerts (docs/grading-evidence.md)
   - Ran evidence_report.py for automated data collection
-- [EVIDENCE_LINK]: (Link to specific commit or PR)
+- [EVIDENCE_LINK]: https://github.com/giangkh1908/2A202600600-KimHongGiang-Day13/commit/4c8768e
 
 ### F. Kim Hồng Giang (Blueprint & Demo Lead)
 - [TASKS_COMPLETED]: 
   - Compiled team report in blueprint-template.md
   - Coordinated live demo and presentation
   - Ensured all passing criteria are met
-- [EVIDENCE_LINK]: (Link to specific commit or PR)
+- [EVIDENCE_LINK]: https://github.com/giangkh1908/2A202600600-KimHongGiang-Day13/commit/4c8768e
 
 ---
 
